@@ -1,0 +1,16 @@
+spring:
+  profiles:
+    active: dev
+  jackson:
+    #返回date日期格式化
+    date-format: com.fasterxml.jackson.databind.util.StdDateFormat
+    #时区
+    time-zone: GMT+8
+server:
+  tomcat:
+    uri-encoding: UTF-8
+nomService:
+  url:  http://192.168.1.52:8084/mon/
+  softUrl:  clientUpdate/newUpdate
+
+
