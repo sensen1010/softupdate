@@ -1,49 +1,64 @@
 package com.zhixue.softupdate.allUtli;
 
+import lombok.Data;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 import org.springframework.util.DigestUtils;
 import java.io.*;
 import java.math.BigInteger;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.channels.FileChannel;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 
+@Component
 public class FileUtil {
 
-    @Value("${update.pathName}")
-    private static String updatePathName;
+    @Autowired
+    ServiceProperties serviceProperties;
 
-    private static String UPLOAD_FOLDER = System.getProperty("user.dir");
-    private static String PATH = "\\webapps\\file\\";
-    private static String LocalUrl="E:\\imgfile\\";
+    private  String UPLOAD_FOLDER = System.getProperty("user.dir");
+    private  String PATH = "\\webapps\\file\\";
+    private  String LocalUrl="E:\\imgfile\\";
+    private  String ZipUrl="\\webapps\\";
+
 
     /**
      * @desc: 返回上传文件地址
      * @author: sen
      * @date: 2020/8/20 0020 10:12
      **/
-    public static String getUpFileUrl(String pathName){
+    public  String getUpFileUrl(String pathName){
         int lastURL = UPLOAD_FOLDER.lastIndexOf("\\");
         String upFileUrl ="";
         if (pathName==null||pathName.equals("")){
-            //upFileUrl = UPLOAD_FOLDER.substring(0, lastURL) + PATH;
-            upFileUrl=LocalUrl;
+            upFileUrl = UPLOAD_FOLDER.substring(0, lastURL) + PATH;
+            //upFileUrl=LocalUrl;
         }else {
-            //upFileUrl = UPLOAD_FOLDER.substring(0, lastURL) + PATH+pathName+"\\";
-            upFileUrl=LocalUrl+pathName+"\\";
+            upFileUrl = UPLOAD_FOLDER.substring(0, lastURL) + PATH+pathName+"\\";
+           //upFileUrl=LocalUrl+pathName+"\\";
         }
         return upFileUrl;
     }
-
+    public  String getZipFileUrl(){
+        int lastURL = UPLOAD_FOLDER.lastIndexOf("\\");
+        String zipFileUrl = UPLOAD_FOLDER.substring(0, lastURL) + ZipUrl;
+        return zipFileUrl;
+    }
 
     /**
      * @desc: 从互联网下载文件
      * @author: sen
      * @date: 2020/8/20 0020 10:15
      **/
-    public static void  downLoadFromUrl(String fileType,String urlStr,String fileName,String savePath) throws IOException {
+    public  void  downLoadFromUrl(String fileType,String urlStr,String fileName,String savePath) throws IOException {
         URL url = new URL(urlStr);
         HttpURLConnection conn = (HttpURLConnection)url.openConnection();
         //设置超时间为3秒
@@ -73,11 +88,34 @@ public class FileUtil {
         //处理文件
         //若是前端文件  前端文件进行解压操作，解压到webapps文件夹中。
         if (fileType.equals("front")){
-
+            try {
+                ZipUtil.zipUncompress(saveDir+File.separator+fileName,getZipFileUrl());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
         //若是后端，则直接拷贝到文件夹中
         else if (fileType.equals("back")){
-
+            FileChannel input = null;
+            FileChannel output = null;
+            try {
+                input = new FileInputStream(saveDir+File.separator+fileName).getChannel();
+                output = new FileOutputStream(getZipFileUrl()+"/info.war").getChannel();
+                output.transferFrom(input, 0, input.size());
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                try {
+                    if (input != null) {
+                        input.close();
+                    }
+                    if (output != null) {
+                        output.close();
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
         }
         System.out.println("info:"+url+" download success");
     }
@@ -87,7 +125,7 @@ public class FileUtil {
     * @author: sen
     * @date: 2020/8/20 0020 10:14
     **/
-    public static  byte[] readInputStream(InputStream inputStream) throws IOException {
+    public   byte[] readInputStream(InputStream inputStream) throws IOException {
         byte[] buffer = new byte[1024];
         int len = 0;
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -103,7 +141,7 @@ public class FileUtil {
      * @author: sen
      * @date: 2020/8/20 0020 10:13
      **/
-    public static String fileToBetyArray(InputStream fis) {
+    public  String fileToBetyArray(InputStream fis) {
         MessageDigest md = null;
         //FileInputStream fis = null;
         byte[] buffer = null;
@@ -139,9 +177,14 @@ public class FileUtil {
      * @author: sen
      * @date: 2020/8/20 0020 10:13
      **/
-    public static void setJsonToFile(String fileName,String data) {
+    public  void setJsonToFile(String fileName,String data) {
         BufferedWriter writer = null;
-        File file = new File(getUpFileUrl(updatePathName)+fileName+".json");
+        File filePath = new File(getUpFileUrl(serviceProperties.getUpdatePathName()));
+        File file = new File(getUpFileUrl(serviceProperties.getUpdatePathName())+fileName+".json");
+       //如果文件夹不存在
+        if (!filePath.exists()){
+            filePath.mkdirs();
+        }
         //如果文件不存在，则新建一个
         if(!file.exists()){
             try {
@@ -173,8 +216,8 @@ public class FileUtil {
      * @author: sen
      * @date: 2020/8/20 0020 10:13
      **/
-    public static String getJsonfromFile(String fileName) {
-        String Path=getUpFileUrl(updatePathName)+fileName+".json";
+    public  String getJsonfromFile(String fileName) {
+        String Path=getUpFileUrl(serviceProperties.getUpdatePathName())+fileName+".json";
         BufferedReader reader = null;
         String laststr = "";
         try {
@@ -187,7 +230,7 @@ public class FileUtil {
             }
             reader.close();
         } catch (IOException e) {
-            e.printStackTrace();
+            return null;
         } finally {
             if (reader != null) {
                 try {

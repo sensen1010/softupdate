@@ -3,31 +3,38 @@ package com.zhixue.softupdate.allUtli;
 import com.alibaba.fastjson.JSONException;
 import com.alibaba.fastjson.JSONObject;
 import jdk.internal.dynalink.beans.StaticClass;
+import lombok.Data;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.PropertySource;
+import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 
 import java.io.IOException;
 import java.util.Date;
 
-public class serviceClient {
+@Component
+public class ServiceClient {
 
-    @Value("${nomService.url}")
-    private static String service;
+    @Autowired
+    ServiceProperties serviceProperties;
+    @Autowired
+    FileUtil fileUtil;
 
-    @Value("${nomService.softUrl}")
-    private static String softUrl;
-
-    public static String updateSoftService(String type) {
+    public  String updateSoftService(String type) {
         MultiValueMap<String, String> multiValueMap = new LinkedMultiValueMap<>();
-        multiValueMap.addIfAbsent("type", type);
-        String re = HttpClient.sendPostRequest(service+softUrl, multiValueMap);
+        multiValueMap.addIfAbsent("type", type.toUpperCase());
+        System.out.println(serviceProperties.getService()+serviceProperties.getSoftUrl());
+        String re = HttpClient.sendPostRequest(serviceProperties.getService()+serviceProperties.getSoftUrl(), multiValueMap);
         if(re==null){
             return null;
         }else {
             JSONObject jsonObject= null;
             try {
                 jsonObject =JSONObject.parseObject(re);
+                System.out.println(jsonObject);
                 if ( jsonObject.getString("code").equals("1")){
                     return null;
                 }
@@ -40,7 +47,7 @@ public class serviceClient {
                     String softContent=data.getString("softMd5");
                     String softSize=data.getString("softSize");
                     //获取保存的json文件
-                    String jsonFile=FileUtil.getJsonfromFile(type);
+                    String jsonFile=fileUtil.getJsonfromFile(type);
                     if (jsonFile!=null&&!jsonFile.equals("")){
                         JSONObject reJsonFile=JSONObject.parseObject(jsonFile);
                         String reSoftMd5=reJsonFile.getString("softMd5");
@@ -49,14 +56,14 @@ public class serviceClient {
                         }
                     }
                     //保存新文件
-                    FileUtil.setJsonToFile(type,jsonObject.getString("data"));
+                    fileUtil.setJsonToFile(type,jsonObject.getString("data"));
                     //下载文件
-                    String fileUrl=service+"/file/"+type+"/"+softDownUrl;
+                    String fileUrl=serviceProperties.getFileUrl()+type+"/"+softDownUrl;
                    new Thread(new Runnable() {
                        @Override
                        public void run() {
                            try {
-                               FileUtil.downLoadFromUrl(type,fileUrl,softDownUrl,FileUtil.getUpFileUrl("update"));
+                               fileUtil.downLoadFromUrl(type,fileUrl,softDownUrl,fileUtil.getUpFileUrl("update"));
                            } catch (IOException e) {
                                e.printStackTrace();
                            }

@@ -10,7 +10,9 @@ server:
   tomcat:
     uri-encoding: UTF-8
 nomService:
-  url:  http://192.168.1.52:8084/mon/
-  softUrl:  clientUpdate/newUpdate
-
+  fileUrl: http://182.92.220.213:8080/file/
+  serviceUrl:  http://182.92.220.213:8080/mon/
+  softUrl: clientUpdate/newUpdate
+update:
+  pathName: json
 
